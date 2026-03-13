@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BillTrace Ledger — Currency Authentication</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 3D Money Background Canvas -->
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- Floating Particles -->
+    <div class="particles-container" id="particlesContainer"></div>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- ================================================================= -->
+    <!-- HEADER                                                            -->
+    <!-- ================================================================= -->
+    <header class="app-header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <span class="logo-icon">🔍</span>
+                    <div>
+                        <h1>BillTrace Ledger</h1>
+                        <p class="tagline">Currency Authentication &amp; Counterfeit Detection</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-outline btn-sm" id="historyBtn" title="View scan history">
+                        📋 History
+                    </button>
+                    <button class="btn btn-outline btn-sm btn-danger" id="resetBtn" title="Reset all scan data">
+                        🗑️ Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- ============================================================= -->
+        <!-- INFO BANNER                                                    -->
+        <!-- ============================================================= -->
+        <div class="info-banner">
+            <div class="info-icon"></div>
+            <div class="info-text">
+                <strong>How it works:</strong> Upload a currency note image or enter the serial number manually.
+                The system checks against a verified issuance database and scans for clone patterns —
+                if the same serial was recently scanned in a different location, it flags a counterfeit alert.
+            </div>
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- SCANNER CARD                                                   -->
+        <!-- ============================================================= -->
+        <section class="card scanner-card">
+            <div class="card-header">
+                <h2>Scan Currency Note</h2>
+                <p>Upload an image or enter the serial number to verify authenticity</p>
+            </div>
+            <form id="scanForm" enctype="multipart/form-data">
+                <!-- Image Upload -->
+                <div class="form-group">
+                    <label for="imageInput" class="form-label">Upload Note Image</label>
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="upload-placeholder" id="uploadPlaceholder">
+                            <span class="upload-icon">📤</span>
+                            <span class="upload-text">Click to upload or drag &amp; drop</span>
+                            <span class="upload-hint">PNG, JPG up to 10MB</span>
+                        </div>
+                        <div class="upload-preview" id="uploadPreview" style="display:none;">
+                            <img id="previewImg" src="" alt="Preview">
+                            <button type="button" class="btn-clear-img" id="clearImgBtn" title="Remove image">✕</button>
+                        </div>
+                        <input type="file" id="imageInput" name="image" accept="image/*" hidden>
+                    </div>
+                </div>
+
+                <!-- Divider -->
+                <div class="divider"><span>OR</span></div>
+
+                <!-- Manual Serial Input -->
+                <div class="form-group">
+                    <label for="serialInput" class="form-label">
+                        Enter Serial Number Manually
+                        <span class="tooltip" title="Enter the alphanumeric serial number printed on the currency note">?</span>
+                    </label>
+                    <input type="text" id="serialInput" name="serial"
+                           class="form-input"
+                           placeholder="e.g., A1B2C3D4"
+                           maxlength="20"
+                           autocomplete="off"
+                           spellcheck="false">
+                </div>
+
+                <!-- Simulated Location Selector -->
+                <div class="form-group">
+                    <label for="locationSelect" class="form-label">
+                        Simulated GPS Location
+                        <span class="tooltip" title="In production, this would be captured automatically via device GPS">?</span>
+                    </label>
+                    <select id="locationSelect" name="location_index" class="form-select">
+                        <option value="">— Random Location —</option>
+                    </select>
+                </div>
+
+                <!-- Process Button -->
+                <button type="submit" class="btn btn-primary btn-lg btn-block" id="processBtn">
+                    <span class="btn-text">⚡ PROCESS &amp; VERIFY</span>
+                    <span class="btn-loading" style="display:none;">
+                        <span class="spinner"></span> Processing…
+                    </span>
+                </button>
+            </form>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- RESULTS PANEL (Hidden initially, shown after processing)       -->
+        <!-- ============================================================= -->
+        <section class="card results-card" id="resultsPanel" style="display:none;">
+            <div class="card-header">
+                <h2>📊 Scan Results</h2>
+            </div>
+
+            <!-- Status Banner -->
+            <div class="status-banner" id="statusBanner">
+                <div class="status-icon" id="statusIcon"></div>
+                <div class="status-content">
+                    <h3 id="statusTitle"></h3>
+                    <p id="statusMessage"></p>
+                </div>
+            </div>
+
+            <!-- Details Grid -->
+            <div class="details-grid">
+                <div class="detail-item">
+                    <span class="detail-label">Serial Number</span>
+                    <span class="detail-value mono" id="resultSerial">—</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Scan Time</span>
+                    <span class="detail-value" id="resultTime">—</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Location</span>
+                    <span class="detail-value" id="resultLocation">—</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Total Scans</span>
+                    <span class="detail-value" id="resultScanCount">—</span>
+                </div>
+            </div>
+
+            <!-- Trace Map Placeholder -->
+            <div class="trace-map" id="traceMap">
+                <div class="map-header">🗺️ Trace Map: Last Seen Route</div>
+                <div class="map-body" id="mapBody">
+                    <div class="map-placeholder">
+                        <div class="map-pins" id="mapPins"></div>
+                        <div class="map-label">Visual trace map — scan locations plotted here</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scan History for this Serial -->
+            <div class="serial-history" id="serialHistory">
+                <h3>📜 Scan History for <span id="historySerial" class="mono"></span></h3>
+                <div class="history-timeline" id="historyTimeline"></div>
+            </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- FULL HISTORY PANEL (toggled via History button)                -->
+        <!-- ============================================================= -->
+        <section class="card history-card" id="historyPanel" style="display:none;">
+            <div class="card-header">
+                <h2>📋 Full Scan Ledger</h2>
+                <p>All scanned notes across sessions (<span id="totalScans">0</span> total)</p>
+            </div>
+            <div class="history-table-wrapper">
+                <table class="history-table" id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>Serial</th>
+                            <th>Timestamp</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody"></tbody>
+                </table>
+                <div class="empty-state" id="emptyHistory" style="display:none;">
+                    <span class="empty-icon">📭</span>
+                    <p>No scans recorded yet. Start scanning to build your ledger.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ================================================================= -->
+    <!-- FOOTER                                                            -->
+    <!-- ================================================================= -->
+    <footer class="app-footer">
+        <div class="container">
+            <p>BillTrace Ledger &copy; 2026 — Counterfeit Detection System &bull; Demo Application</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
