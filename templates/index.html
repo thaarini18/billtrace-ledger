@@ -9,18 +9,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- 3D Money Background Canvas -->
     <canvas id="bgCanvas"></canvas>
-
-    <!-- Floating Particles -->
     <div class="particles-container" id="particlesContainer"></div>
-
-    <!-- Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <!-- ================================================================= -->
-    <!-- HEADER                                                            -->
-    <!-- ================================================================= -->
     <header class="app-header">
         <div class="container">
             <div class="header-content">
@@ -32,21 +24,25 @@
                     </div>
                 </div>
                 <div class="header-actions">
+                    <div class="user-badge" title="Logged in as {{ username }}">
+                        <span class="user-avatar">{{ username[0]|upper }}</span>
+                        <span class="user-name">{{ username }}</span>
+                    </div>
                     <button class="btn btn-outline btn-sm" id="historyBtn" title="View scan history">
                         History
                     </button>
                     <button class="btn btn-outline btn-sm btn-danger" id="resetBtn" title="Reset all scan data">
                         Reset
                     </button>
+                    <a href="/logout" class="btn btn-outline btn-sm btn-signout" title="Sign out">
+                        Sign Out
+                    </a>
                 </div>
             </div>
         </div>
     </header>
 
-    <main class="container">
-        <!-- ============================================================= -->
-        <!-- INFO BANNER                                                    -->
-        <!-- ============================================================= -->
+    <main class="contai
         <div class="info-banner">
             <div class="info-icon"></div>
             <div class="info-text">
@@ -56,16 +52,13 @@
             </div>
         </div>
 
-        <!-- ============================================================= -->
-        <!-- SCANNER CARD                                                   -->
-        <!-- ============================================================= -->
+        
         <section class="card scanner-card">
             <div class="card-header">
                 <h2>Scan Currency Note</h2>
                 <p>Upload an image or enter the serial number to verify authenticity</p>
             </div>
             <form id="scanForm" enctype="multipart/form-data">
-                <!-- Image Upload -->
                 <div class="form-group">
                     <label for="imageInput" class="form-label">Upload Note Image</label>
                     <div class="upload-zone" id="uploadZone">
@@ -82,10 +75,10 @@
                     </div>
                 </div>
 
-                <!-- Divider -->
+                
                 <div class="divider"><span>OR</span></div>
 
-                <!-- Manual Serial Input -->
+                
                 <div class="form-group">
                     <label for="serialInput" class="form-label">
                         Enter Serial Number Manually
@@ -99,7 +92,7 @@
                            spellcheck="false">
                 </div>
 
-                <!-- Simulated Location Selector -->
+              
                 <div class="form-group">
                     <label for="locationSelect" class="form-label">
                         Simulated GPS Location
@@ -110,7 +103,7 @@
                     </select>
                 </div>
 
-                <!-- Process Button -->
+             
                 <button type="submit" class="btn btn-primary btn-lg btn-block" id="processBtn">
                     <span class="btn-text">PROCESS &amp; VERIFY</span>
                     <span class="btn-loading" style="display:none;">
@@ -120,15 +113,13 @@
             </form>
         </section>
 
-        <!-- ============================================================= -->
-        <!-- RESULTS PANEL (Hidden initially, shown after processing)       -->
-        <!-- ============================================================= -->
+        
         <section class="card results-card" id="resultsPanel" style="display:none;">
             <div class="card-header">
                 <h2>Scan Results</h2>
             </div>
 
-            <!-- Status Banner -->
+            
             <div class="status-banner" id="statusBanner">
                 <div class="status-icon" id="statusIcon"></div>
                 <div class="status-content">
@@ -137,7 +128,7 @@
                 </div>
             </div>
 
-            <!-- Details Grid -->
+            
             <div class="details-grid">
                 <div class="detail-item">
                     <span class="detail-label">Serial Number</span>
@@ -157,7 +148,7 @@
                 </div>
             </div>
 
-            <!-- Trace Map Placeholder -->
+            
             <div class="trace-map" id="traceMap">
                 <div class="map-header">Trace Map: Last Seen Route</div>
                 <div class="map-body" id="mapBody">
@@ -168,16 +159,13 @@
                 </div>
             </div>
 
-            <!-- Scan History for this Serial -->
+            
             <div class="serial-history" id="serialHistory">
                 <h3>Scan History for <span id="historySerial" class="mono"></span></h3>
                 <div class="history-timeline" id="historyTimeline"></div>
             </div>
         </section>
 
-        <!-- ============================================================= -->
-        <!-- FULL HISTORY PANEL (toggled via History button)                -->
-        <!-- ============================================================= -->
         <section class="card history-card" id="historyPanel" style="display:none;">
             <div class="card-header">
                 <h2>Full Scan Ledger</h2>
@@ -203,9 +191,6 @@
         </section>
     </main>
 
-    <!-- ================================================================= -->
-    <!-- FOOTER                                                            -->
-    <!-- ================================================================= -->
     <footer class="app-footer">
         <div class="container">
             <p>BillTrace Ledger &copy; 2026 — Counterfeit Detection System &bull; Demo Application</p>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BillTrace Ledger — Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="auth-page">
+    <canvas id="bgCanvas"></canvas>
+    <div class="particles-container" id="particlesContainer"></div>
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="auth-wrapper">
+        <div class="auth-card">
+            <div class="auth-glow"></div>
+            <div class="auth-logo">
+                <span class="auth-logo-icon"></span>
+                <h1>BillTrace Ledger</h1>
+                <p class="auth-tagline">Currency Authentication & Counterfeit Detection</p>
+            </div>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="loginTab" data-tab="login">Login</button>
+                <button class="auth-tab" id="signupTab" data-tab="signup">Sign Up</button>
+                <div class="auth-tab-indicator" id="tabIndicator"></div>
+            </div>
+
+            <div class="auth-message" id="authMessage" style="display:none;"></div>
+
+            <form class="auth-form" id="loginForm">
+                <div class="auth-form-group">
+                    <label for="loginUsername" class="auth-label">Username</label>
+                    <div class="auth-input-wrapper">
+                        <span class="auth-input-icon"></span>
+                        <input type="text" id="loginUsername" class="auth-input"
+                               placeholder="Enter your username" autocomplete="username"
+                               required minlength="3">
+                    </div>
+                </div>
+                <div class="auth-form-group">
+                    <label for="loginPassword" class="auth-label">Password</label>
+                    <div class="auth-input-wrapper">
+                        <span class="auth-input-icon"></span>
+                        <input type="password" id="loginPassword" class="auth-input"
+                               placeholder="Enter your password" autocomplete="current-password"
+                               required minlength="4">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg btn-block auth-submit" id="loginBtn">
+                    <span class="btn-text">Login</span>
+                    <span class="btn-loading" style="display:none;">
+                        <span class="spinner"></span> Logging in…
+                    </span>
+                </button>
+            </form>
+
+            <form class="auth-form" id="signupForm" style="display:none;">
+                <div class="auth-form-group">
+                    <label for="signupUsername" class="auth-label">Choose a Username</label>
+                    <div class="auth-input-wrapper">
+                        <span class="auth-input-icon">👤</span>
+                        <input type="text" id="signupUsername" class="auth-input"
+                               placeholder="At least 3 characters" autocomplete="username"
+                               required minlength="3">
+                    </div>
+                </div>
+                <div class="auth-form-group">
+                    <label for="signupPassword" class="auth-label">Create Password</label>
+                    <div class="auth-input-wrapper">
+                        <span class="auth-input-icon"></span>
+                        <input type="password" id="signupPassword" class="auth-input"
+                               placeholder="At least 4 characters" autocomplete="new-password"
+                               required minlength="4">
+                    </div>
+                </div>
+                <div class="auth-form-group">
+                    <label for="signupConfirm" class="auth-label">Confirm Password</label>
+                    <div class="auth-input-wrapper">
+                        <span class="auth-input-icon"></span>
+                        <input type="password" id="signupConfirm" class="auth-input"
+                               placeholder="Re-enter your password" autocomplete="new-password"
+                               required minlength="4">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg btn-block auth-submit" id="signupBtn">
+                    <span class="btn-text">Create Account</span>
+                    <span class="btn-loading" style="display:none;">
+                        <span class="spinner"></span> Creating…
+                    </span>
+                </button>
+            </form>
+
+            <div class="auth-footer" id="authFooter">
+                <span>Don't have an account?</span>
+                <a href="#" id="switchToSignup">Sign up here</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

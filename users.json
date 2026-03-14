@@ -1,0 +1,5 @@
+{
+  "testertestuser": "pbkdf2:sha256:1000000$C6pkFjwKJ46NrYDH$d6233e4db228f336c6f571992197563e44f831388b16827459b40ff8b9182185",
+  "finaltest": "pbkdf2:sha256:1000000$0f141CqVBzgXOSFN$8e1a1b50b73fb7ee2afd9ea97da825819d85139032b7556e8cca64fffdf9f4d1",
+  "thaarinib": "pbkdf2:sha256:1000000$1JtcJ4rWpdjnRsXa$5aa7968cadf6a728f8a7c8cfc83a7b34a137e72becd8599c407b2788b3b8d22c"
+}

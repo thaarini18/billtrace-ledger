@@ -1,16 +1,6 @@
-/**
- * BillTrace Ledger — Enhanced Frontend
- * ======================================
- * 3D money canvas background, particle effects, popup animations,
- * toast notifications, confetti celebrations, dynamic interactions.
- */
-
 (function () {
     "use strict";
 
-    // ========================================================================
-    //  3D MONEY BACKGROUND CANVAS
-    // ========================================================================
     var canvas = document.getElementById("bgCanvas");
     var ctx = canvas.getContext("2d");
     var moneySymbols = ["$", "\u20B9", "\u00A3", "\u20AC", "\u00A5", "\uD83D\uDCB5", "\uD83D\uDCB0", "\uD83E\uDE99"];
@@ -72,7 +62,7 @@
             }
         }
 
-        // Maintain ~25 items
+        
         if (floatingItems.length < 25 && Math.random() < 0.03) {
             floatingItems.push(createFloatingItem());
         }
@@ -81,9 +71,6 @@
     }
     animateCanvas();
 
-    // ========================================================================
-    //  PARTICLE SYSTEM
-    // ========================================================================
     var particleContainer = document.getElementById("particlesContainer");
 
     function spawnParticles() {
@@ -113,9 +100,6 @@
     spawnParticles();
     setInterval(spawnParticles, 15000);
 
-    // ========================================================================
-    //  TOAST NOTIFICATIONS
-    // ========================================================================
     var toastContainer = document.getElementById("toastContainer");
 
     function showToast(message, type) {
@@ -135,9 +119,6 @@
         }, 3500);
     }
 
-    // ========================================================================
-    //  CONFETTI CELEBRATION
-    // ========================================================================
     function launchConfetti() {
         var colors = ["#00e676", "#00d4ff", "#7b68ee", "#ffab00", "#ff5252", "#fff"];
         for (var c = 0; c < 50; c++) {
@@ -162,10 +143,140 @@
         }
     }
 
-    // ========================================================================
-    //  DOM REFERENCES
-    // ========================================================================
     var scanForm        = document.getElementById("scanForm");
+    var isAuthPage      = !scanForm;
+
+    if (isAuthPage) {
+        var loginTab      = document.getElementById("loginTab");
+        var signupTab     = document.getElementById("signupTab");
+        var tabIndicator  = document.getElementById("tabIndicator");
+        var loginForm     = document.getElementById("loginForm");
+        var signupForm    = document.getElementById("signupForm");
+        var authMessage   = document.getElementById("authMessage");
+        var authFooter    = document.getElementById("authFooter");
+        var switchLink    = document.getElementById("switchToSignup");
+
+        function switchTab(tab) {
+            if (tab === "signup") {
+                loginTab.classList.remove("active");
+                signupTab.classList.add("active");
+                tabIndicator.classList.add("right");
+                loginForm.style.display = "none";
+                signupForm.style.display = "";
+                authFooter.innerHTML = '<span>Already have an account?</span> <a href="#" id="switchToLogin">Login here</a>';
+                document.getElementById("switchToLogin").addEventListener("click", function(e) { e.preventDefault(); switchTab("login"); });
+            } else {
+                signupTab.classList.remove("active");
+                loginTab.classList.add("active");
+                tabIndicator.classList.remove("right");
+                signupForm.style.display = "none";
+                loginForm.style.display = "";
+                authFooter.innerHTML = '<span>Don\'t have an account?</span> <a href="#" id="switchToSignup">Sign up here</a>';
+                document.getElementById("switchToSignup").addEventListener("click", function(e) { e.preventDefault(); switchTab("signup"); });
+            }
+            hideMessage();
+        }
+
+        loginTab.addEventListener("click", function() { switchTab("login"); });
+        signupTab.addEventListener("click", function() { switchTab("signup"); });
+        if (switchLink) {
+            switchLink.addEventListener("click", function(e) { e.preventDefault(); switchTab("signup"); });
+        }
+
+        function showMessage(text, type) {
+            authMessage.textContent = text;
+            authMessage.className = "auth-message " + type;
+            authMessage.style.display = "";
+        }
+
+        function hideMessage() {
+            authMessage.style.display = "none";
+        }
+
+        function setAuthLoading(btn, loading) {
+            var btnText = btn.querySelector(".btn-text");
+            var btnLoading = btn.querySelector(".btn-loading");
+            btn.disabled = loading;
+            btnText.style.display = loading ? "none" : "";
+            btnLoading.style.display = loading ? "inline-flex" : "none";
+        }
+
+        // Login form
+        loginForm.addEventListener("submit", async function(e) {
+            e.preventDefault();
+            hideMessage();
+            var username = document.getElementById("loginUsername").value.trim();
+            var password = document.getElementById("loginPassword").value;
+            var loginBtn = document.getElementById("loginBtn");
+
+            if (!username || !password) {
+                showMessage("Please fill in all fields.", "error");
+                return;
+            }
+
+            setAuthLoading(loginBtn, true);
+            try {
+                var res = await fetch("/api/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username: username, password: password })
+                });
+                var data = await res.json();
+                if (!res.ok) {
+                    showMessage(data.error || "Login failed.", "error");
+                } else {
+                    showMessage("Welcome back, " + data.username + "!", "success");
+                    setTimeout(function() { window.location.href = "/"; }, 600);
+                }
+            } catch (err) {
+                showMessage("Network error. Please try again.", "error");
+            } finally {
+                setAuthLoading(loginBtn, false);
+            }
+        });
+
+        // Signup form
+        signupForm.addEventListener("submit", async function(e) {
+            e.preventDefault();
+            hideMessage();
+            var username = document.getElementById("signupUsername").value.trim();
+            var password = document.getElementById("signupPassword").value;
+            var confirm  = document.getElementById("signupConfirm").value;
+            var signupBtn = document.getElementById("signupBtn");
+
+            if (!username || !password || !confirm) {
+                showMessage("Please fill in all fields.", "error");
+                return;
+            }
+            if (password !== confirm) {
+                showMessage("Passwords do not match.", "error");
+                return;
+            }
+
+            setAuthLoading(signupBtn, true);
+            try {
+                var res = await fetch("/api/register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username: username, password: password })
+                });
+                var data = await res.json();
+                if (!res.ok) {
+                    showMessage(data.error || "Registration failed.", "error");
+                } else {
+                    showMessage("Account created! Redirecting…", "success");
+                    setTimeout(function() { window.location.href = "/"; }, 600);
+                }
+            } catch (err) {
+                showMessage("Network error. Please try again.", "error");
+            } finally {
+                setAuthLoading(signupBtn, false);
+            }
+        });
+ 
+        return;
+    }
+
     var imageInput      = document.getElementById("imageInput");
     var uploadZone      = document.getElementById("uploadZone");
     var uploadPlaceholder = document.getElementById("uploadPlaceholder");
@@ -180,9 +291,6 @@
     var historyBtn      = document.getElementById("historyBtn");
     var resetBtn        = document.getElementById("resetBtn");
 
-    // ========================================================================
-    //  INITIALIZE: LOAD LOCATIONS
-    // ========================================================================
     async function loadLocations() {
         try {
             var res = await fetch("/api/locations");
@@ -199,9 +307,6 @@
     }
     loadLocations();
 
-    // ========================================================================
-    //  IMAGE UPLOAD HANDLING
-    // ========================================================================
     uploadZone.addEventListener("click", function () {
         imageInput.click();
     });
@@ -248,9 +353,7 @@
         previewImg.src = "";
     });
 
-    // ========================================================================
-    //  FORM SUBMISSION
-    // ========================================================================
+   
     scanForm.addEventListener("submit", async function (e) {
         e.preventDefault();
 
@@ -284,7 +387,6 @@
 
             renderResults(data);
 
-            // Celebration / toast based on result
             if (data.status_code === "green") {
                 showToast("Note verified! Serial " + data.serial + " is authentic.", "success");
                 launchConfetti();
@@ -309,20 +411,16 @@
         btnLoading.style.display = loading ? "inline-flex" : "none";
     }
 
-    // ========================================================================
-    //  RENDER RESULTS (with popup animation)
-    // ========================================================================
     function renderResults(data) {
-        // Reset animation by briefly hiding
         resultsPanel.style.display = "none";
-        void resultsPanel.offsetHeight; // Force reflow
+        void resultsPanel.offsetHeight; 
         resultsPanel.style.display = "block";
 
         setTimeout(function () {
             resultsPanel.scrollIntoView({ behavior: "smooth", block: "start" });
         }, 100);
 
-        // Status banner
+        
         var banner = document.getElementById("statusBanner");
         var icon = document.getElementById("statusIcon");
         var title = document.getElementById("statusTitle");
@@ -363,9 +461,6 @@
         });
     }
 
-    // ========================================================================
-    //  TRACE MAP
-    // ========================================================================
     function renderMap(history) {
         var mapPins = document.getElementById("mapPins");
         mapPins.innerHTML = "";
@@ -385,9 +480,6 @@
         });
     }
 
-    // ========================================================================
-    //  TIMELINE
-    // ========================================================================
     function renderTimeline(history) {
         var timeline = document.getElementById("historyTimeline");
         timeline.innerHTML = "";
@@ -405,9 +497,6 @@
         });
     }
 
-    // ========================================================================
-    //  HISTORY PANEL
-    // ========================================================================
     historyBtn.addEventListener("click", function () {
         var visible = historyPanel.style.display !== "none";
         if (visible) {
@@ -450,7 +539,6 @@
                 });
             }
 
-            // Popup animation: hide + reflow + show
             historyPanel.style.display = "none";
             void historyPanel.offsetHeight;
             historyPanel.style.display = "block";
@@ -463,9 +551,6 @@
         }
     }
 
-    // ========================================================================
-    //  RESET LEDGER
-    // ========================================================================
     resetBtn.addEventListener("click", async function () {
         if (!confirm("Reset all scan data? This cannot be undone.")) return;
 
@@ -481,9 +566,7 @@
         }
     });
 
-    // ========================================================================
-    //  UTILITY: ESCAPE HTML (XSS protection)
-    // ========================================================================
+    
     function escapeHtml(text) {
         var div = document.createElement("div");
         div.appendChild(document.createTextNode(text));
@@ -491,3 +574,4 @@
     }
 
 })();
+

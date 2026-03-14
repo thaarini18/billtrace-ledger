@@ -1,39 +1,3 @@
-"""
-BillTrace Ledger - Full-Stack Currency Note Authentication System
-=================================================================
-A Flask-based web application for shopkeepers to scan currency note
-serial numbers, detect potential counterfeits (cloned notes), and
-log trace data for forensic analysis.
-
-Data Structures:
-----------------
-all_scanned_bills (dict):
-    Key   = Serial Number (str)
-    Value = List of scan records, each record is a dict:
-        {
-            "timestamp": ISO 8601 datetime string,
-            "location": {"lat": float, "lon": float, "name": str},
-            "user": str (shop identifier)
-        }
-
-issued_series_log (dict):
-    Key   = Known valid serial number prefix/full number (str)
-    Value = "Verified"
-
-JSON Schema for ledger.json:
-{
-    "all_scanned_bills": {
-        "<SERIAL_NUMBER>": [
-            {
-                "timestamp": "2026-03-13T10:30:00",
-                "location": {"lat": 40.7128, "lon": -74.0060, "name": "New York"},
-                "user": "shop_1"
-            }
-        ]
-    }
-}
-"""
-
 import json
 import os
 import random
@@ -41,20 +5,15 @@ import secrets
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
 
-# ---------------------------------------------------------------------------
-# App Configuration
-# ---------------------------------------------------------------------------
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
 
 LEDGER_FILE = Path(__file__).parent / "ledger.json"
+USERS_FILE = Path(__file__).parent / "users.json"
 
-# ---------------------------------------------------------------------------
-# Known Valid Serial Numbers (issued_series_log)
-# These represent serial numbers verified by a central bank or authority.
-# ---------------------------------------------------------------------------
 issued_series_log = {
     "A1B2C3D4": "Verified",
     "X9Y8Z7W6": "Verified",
@@ -63,10 +22,6 @@ issued_series_log = {
     "Q3R4S5T6": "Verified",
 }
 
-# ---------------------------------------------------------------------------
-# Simulated Location Profiles
-# Used to simulate GPS capture for demo purposes.
-# ---------------------------------------------------------------------------
 LOCATIONS = [
     {"lat": 40.7128, "lon": -74.0060, "name": "New York, NY"},
     {"lat": 34.0522, "lon": -118.2437, "name": "Los Angeles, CA"},
@@ -75,21 +30,10 @@ LOCATIONS = [
     {"lat": 33.4484, "lon": -112.0740, "name": "Phoenix, AZ"},
 ]
 
-# ---------------------------------------------------------------------------
-# Dummy OCR Serial Numbers
-# Simulated OCR results for demo when no real OCR is available.
-# ---------------------------------------------------------------------------
 DUMMY_SERIALS = ["A1B2C3D4", "X9Y8Z7W6", "FLAG1234", "M5N6O7P8", "FAKE9999", "UNK00001"]
 
-
-# ===========================================================================
-# Data Persistence — JSON File Piping (Option A)
-# ===========================================================================
 def load_ledger() -> dict:
-    """
-    Load the scanned bills ledger from ledger.json at startup.
-    Returns an empty dict if the file doesn't exist or is corrupt.
-    """
+
     if LEDGER_FILE.exists():
         try:
             data = json.loads(LEDGER_FILE.read_text(encoding="utf-8"))
@@ -101,67 +45,52 @@ def load_ledger() -> dict:
 
 
 def save_ledger(all_scanned_bills: dict) -> None:
-    """
-    Persist the updated all_scanned_bills dict to ledger.json
-    after every successful scan processing.
-    """
+   
     payload = {"all_scanned_bills": all_scanned_bills}
     LEDGER_FILE.write_text(
         json.dumps(payload, indent=2, default=str), encoding="utf-8"
     )
 
 
-# Load existing data on startup
 all_scanned_bills: dict = load_ledger()
 
+def load_users() -> dict:
+    
+    if USERS_FILE.exists():
+        try:
+            data = json.loads(USERS_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return data
+        except (json.JSONDecodeError, KeyError):
+            pass
+    return {}
 
-# ===========================================================================
-# Simulated OCR Function
-# ===========================================================================
+
+def save_users(users: dict) -> None:
+   
+    USERS_FILE.write_text(
+        json.dumps(users, indent=2, default=str), encoding="utf-8"
+    )
+
+
+registered_users: dict = load_users()
+
 def simulate_ocr(has_image: bool, manual_serial=None):
-    """
-    Simulated OCR function.
-    - If a manual serial number is provided, use that directly.
-    - If an image is uploaded (has_image=True), pick a random dummy serial.
-    - Otherwise return empty string.
-    """
+    
     if manual_serial and manual_serial.strip():
-        # Sanitize: keep only alphanumeric characters
         return "".join(c for c in manual_serial.strip().upper() if c.isalnum())[:20]
     if has_image:
         return random.choice(DUMMY_SERIALS)
     return ""
 
-
-# ===========================================================================
-# Simulated GPS Capture
-# ===========================================================================
 def simulate_gps(location_index=None):
-    """
-    Simulate capturing GPS location.
-    Uses static dummy data for demo purposes.
-    """
+   
     if location_index is not None and 0 <= location_index < len(LOCATIONS):
         return LOCATIONS[location_index]
     return random.choice(LOCATIONS)
 
-
-# ===========================================================================
-# Core Clone Detection Logic
-# ===========================================================================
 def check_bill(serial: str, current_timestamp: datetime, current_location: dict) -> dict:
-    """
-    Core verification & clone-detection logic.
 
-    Steps:
-    1. Check if serial exists in issued_series_log → if not, flag UNVERIFIED.
-    2. Search all_scanned_bills for prior scans of this serial.
-    3. Innovation Rule: If found AND (time_delta < 1 hour) AND (location differs),
-       flag as CLONED / COUNTERFEIT.
-    4. Append current scan to the ledger and persist.
-
-    Returns a result dict with status, message, history, etc.
-    """
     result = {
         "serial": serial,
         "timestamp": current_timestamp.isoformat(),
@@ -173,7 +102,6 @@ def check_bill(serial: str, current_timestamp: datetime, current_location: dict)
         "clone_alert": False,
     }
 
-    # --- Step 1: Verify against issued series ---
     if serial not in issued_series_log:
         result["status"] = "INVALID"
         result["status_code"] = "red"
@@ -181,23 +109,22 @@ def check_bill(serial: str, current_timestamp: datetime, current_location: dict)
             "Serial number series unrecognized. "
             "This note is NOT in the verified issuance database."
         )
-        # Still record the scan for forensic purposes
+       
+        current_user = session.get("username", "unknown")
         scan_record = {
             "timestamp": current_timestamp.isoformat(),
             "location": current_location,
-            "user": "shop_1",
+            "user": current_user,
         }
         all_scanned_bills.setdefault(serial, []).append(scan_record)
         save_ledger(all_scanned_bills)
         result["history"] = all_scanned_bills.get(serial, [])
         return result
 
-    # --- Step 2 & 3: Check for clones ---
     previous_scans = all_scanned_bills.get(serial, [])
     clone_detected = False
 
     if previous_scans:
-        # Get the most recent previous scan
         most_recent = previous_scans[-1]
         prev_time = datetime.fromisoformat(most_recent["timestamp"])
         prev_loc = most_recent["location"]
@@ -208,20 +135,18 @@ def check_bill(serial: str, current_timestamp: datetime, current_location: dict)
             or current_location["lon"] != prev_loc["lon"]
         )
 
-        # Innovation Rule: < 1 hour AND different location → CLONE
         if time_delta < timedelta(hours=1) and location_differs:
             clone_detected = True
 
-    # --- Step 4: Record the scan ---
+    current_user = session.get("username", "unknown")
     scan_record = {
         "timestamp": current_timestamp.isoformat(),
         "location": current_location,
-        "user": "shop_1",
+        "user": current_user,
     }
     all_scanned_bills.setdefault(serial, []).append(scan_record)
     save_ledger(all_scanned_bills)
 
-    # Build result
     if clone_detected:
         result["status"] = "CLONE ALERT"
         result["status_code"] = "yellow"
@@ -244,44 +169,86 @@ def check_bill(serial: str, current_timestamp: datetime, current_location: dict)
     result["history"] = all_scanned_bills.get(serial, [])
     return result
 
-
-# ===========================================================================
-# Routes
-# ===========================================================================
 @app.route("/")
 def index():
-    """Render the main dashboard."""
-    return render_template("index.html")
+    if "username" not in session:
+        return redirect(url_for("login_page"))
+    return render_template("index.html", username=session["username"])
+
+
+@app.route("/login")
+def login_page():
+    if "username" in session:
+        return redirect(url_for("index"))
+    return render_template("login.html")
+
+
+@app.route("/api/register", methods=["POST"])
+def register():
+    data = request.get_json(silent=True) or {}
+    username = data.get("username", "").strip()
+    password = data.get("password", "").strip()
+
+    if not username or not password:
+        return jsonify({"error": "Username and password are required."}), 400
+
+    if len(username) < 3:
+        return jsonify({"error": "Username must be at least 3 characters."}), 400
+
+    if len(password) < 4:
+        return jsonify({"error": "Password must be at least 4 characters."}), 400
+
+    if username.lower() in {k.lower() for k in registered_users}:
+        return jsonify({"error": "Username already taken."}), 409
+
+    registered_users[username] = generate_password_hash(password, method="pbkdf2:sha256")
+    save_users(registered_users)
+
+    session["username"] = username
+    return jsonify({"message": "Account created successfully!", "username": username})
+
+
+@app.route("/api/login", methods=["POST"])
+def login():
+    data = request.get_json(silent=True) or {}
+    username = data.get("username", "").strip()
+    password = data.get("password", "").strip()
+
+    if not username or not password:
+        return jsonify({"error": "Username and password are required."}), 400
+
+    stored_hash = registered_users.get(username)
+    if not stored_hash or not check_password_hash(stored_hash, password):
+        return jsonify({"error": "Invalid username or password."}), 401
+
+    session["username"] = username
+    return jsonify({"message": "Login successful!", "username": username})
+
+
+@app.route("/logout")
+def logout():
+    session.pop("username", None)
+    return redirect(url_for("login_page"))
 
 
 @app.route("/api/process", methods=["POST"])
 def process_scan():
-    """
-    Process a bill scan.
-    Accepts: multipart form with optional image file and/or manual serial number,
-             plus optional location_index.
-    Returns: JSON result with status, message, history.
-    """
     has_image = "image" in request.files and request.files["image"].filename != ""
     manual_serial = request.form.get("serial", "").strip()
     location_index_str = request.form.get("location_index", "")
 
-    # Parse location index
     location_index = None
     if location_index_str.isdigit():
         location_index = int(location_index_str)
 
-    # Extract serial via simulated OCR
     serial = simulate_ocr(has_image, manual_serial if manual_serial else None)
 
     if not serial:
         return jsonify({"error": "No serial number could be extracted. Please upload an image or enter a serial number manually."}), 400
 
-    # Capture current timestamp and simulated GPS
     current_timestamp = datetime.now()
     current_location = simulate_gps(location_index)
 
-    # Run core check logic
     result = check_bill(serial, current_timestamp, current_location)
 
     return jsonify(result)
@@ -289,7 +256,6 @@ def process_scan():
 
 @app.route("/api/history", methods=["GET"])
 def get_history():
-    """Return the full scan ledger for the dashboard history view."""
     history = []
     for serial, scans in all_scanned_bills.items():
         for scan in scans:
@@ -301,29 +267,22 @@ def get_history():
                 "user": scan.get("user", "unknown"),
                 "verified": verified,
             })
-    # Sort by timestamp descending
     history.sort(key=lambda x: x["timestamp"], reverse=True)
     return jsonify({"history": history, "total_scans": len(history)})
 
 
 @app.route("/api/locations", methods=["GET"])
 def get_locations():
-    """Return available simulated locations."""
     return jsonify({"locations": LOCATIONS})
 
 
 @app.route("/api/reset", methods=["POST"])
 def reset_ledger():
-    """Reset the ledger (clear all scan data). For demo/testing only."""
     global all_scanned_bills
     all_scanned_bills = {}
     save_ledger(all_scanned_bills)
     return jsonify({"message": "Ledger reset successfully."})
 
-
-# ===========================================================================
-# Entry Point
-# ===========================================================================
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 5001))
     app.run(host="0.0.0.0", port=port)
